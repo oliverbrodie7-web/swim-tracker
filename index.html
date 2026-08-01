@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Swim</title>
+<meta name="description" content="Tracking 100 km of swimming in 2026">
+<meta name="theme-color" content="#C2693F">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Swim">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <h1 class="brand">Swim</h1>
+  <div class="topbar-right">
+    <span id="syncStatus" class="sync-pill sync-saved" role="status" aria-live="polite">Saved</span>
+    <button id="refreshBtn" class="icon-btn" type="button" aria-label="Refresh data">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- Dashboard -->
+  <section id="view-dashboard" class="view" data-view="dashboard">
+    <div class="card hero-card">
+      <p class="eyebrow">Total swum in 2026</p>
+      <p class="hero-num"><span id="totalKm">0.0</span><span class="hero-unit"> of 100 km</span></p>
+      <div id="lane" class="lane-wrap" aria-label="Progress lane"></div>
+      <div class="badge-row"><span id="planBadge" class="pill pill-sage">Loading</span></div>
+      <div class="stat-row">
+        <div class="stat"><span class="stat-num" id="statLeft">0</span><span class="stat-label">km to swim</span></div>
+        <div class="stat"><span class="stat-num" id="statLaps">0</span><span class="stat-label">laps done</span></div>
+        <div class="stat"><span class="stat-num" id="statSwims">0</span><span class="stat-label">swims logged</span></div>
+      </div>
+    </div>
+    <div class="card week-card" id="weekCard">
+      <p class="eyebrow">This week</p>
+      <p class="muted">Loading</p>
+    </div>
+  </section>
+
+  <!-- Log -->
+  <section id="view-log" class="view" data-view="log" hidden>
+    <div class="card">
+      <h2 class="card-title" id="logTitle">Log a swim</h2>
+      <form id="swimForm" autocomplete="off">
+        <label class="field">
+          <span class="field-label">Date</span>
+          <input type="date" id="fDate" required>
+        </label>
+        <label class="field">
+          <span class="field-label">Metres</span>
+          <input type="number" id="fMetres" inputmode="numeric" min="25" max="30000" step="25" placeholder="2000" required>
+        </label>
+        <div class="quick-row" role="group" aria-label="Quick metre amounts">
+          <button type="button" class="quick-btn" data-m="1000">1000</button>
+          <button type="button" class="quick-btn" data-m="1500">1500</button>
+          <button type="button" class="quick-btn" data-m="2000">2000</button>
+          <button type="button" class="quick-btn" data-m="2500">2500</button>
+          <button type="button" class="quick-btn" data-m="3000">3000</button>
+        </div>
+        <label class="field">
+          <span class="field-label">Longest unbroken metres <em>optional</em></span>
+          <input type="number" id="fUnbroken" inputmode="numeric" min="25" max="30000" step="25" placeholder="800">
+        </label>
+        <label class="field">
+          <span class="field-label">Total time <em>optional, mm:ss or h:mm:ss</em></span>
+          <input type="text" id="fTime" inputmode="numeric" placeholder="45:00" pattern="^\d{1,2}(:\d{2}){1,2}$">
+          <span class="pace-hint" id="paceHint"></span>
+        </label>
+        <div class="field">
+          <span class="field-label">Effort, RPE 1 to 10 <em>optional</em></span>
+          <div class="rpe-row" id="rpeRow" role="group" aria-label="Rate of perceived exertion"></div>
+        </div>
+        <label class="field">
+          <span class="field-label">Warm up <em>optional</em></span>
+          <input type="text" id="fWarmup" maxlength="120" placeholder="4 x 50 easy">
+        </label>
+        <label class="field">
+          <span class="field-label">Notes <em>optional</em></span>
+          <textarea id="fNotes" rows="3" maxlength="1000" placeholder="How did it feel?"></textarea>
+        </label>
+        <button type="submit" class="save-btn" id="saveBtn">Save swim</button>
+        <button type="button" class="ghost-btn" id="cancelEditBtn" hidden>Cancel edit</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Swims -->
+  <section id="view-swims" class="view" data-view="swims" hidden>
+    <div class="card list-card">
+      <h2 class="card-title">Every swim</h2>
+      <ul id="swimList" class="swim-list"></ul>
+    </div>
+  </section>
+
+  <!-- Plan -->
+  <section id="view-plan" class="view" data-view="plan" hidden>
+    <div class="card list-card">
+      <h2 class="card-title">The plan</h2>
+      <p class="muted plan-intro">Each week ends on the Sunday. Baseline before August is <span id="planBaseline">35.2</span> km.</p>
+      <ul id="planList" class="plan-list"></ul>
+    </div>
+  </section>
+
+  <!-- Insights -->
+  <section id="view-insights" class="view" data-view="insights" hidden>
+    <div class="card">
+      <h2 class="card-title">Progress against plan</h2>
+      <div class="chart-box"><canvas id="chartCumulative"></canvas></div>
+    </div>
+    <div class="card" id="projectionCard">
+      <h2 class="card-title">Projection</h2>
+      <p class="muted">Loading</p>
+    </div>
+    <div class="card">
+      <h2 class="card-title">Pace per 100 m</h2>
+      <p class="muted chart-note">Lower is faster</p>
+      <div class="chart-box"><canvas id="chartPace"></canvas></div>
+    </div>
+    <div class="card">
+      <h2 class="card-title">Longest unbroken swim</h2>
+      <div class="chart-box"><canvas id="chartUnbroken"></canvas></div>
+    </div>
+    <div class="card">
+      <h2 class="card-title">Weekly volume, last 12 weeks</h2>
+      <div class="chart-box"><canvas id="chartWeekly"></canvas></div>
+    </div>
+    <div class="card" id="recordsCard">
+      <h2 class="card-title">Records</h2>
+      <p class="muted">Loading</p>
+    </div>
+  </section>
+
+</main>
+
+<nav class="tabbar" aria-label="Main navigation">
+  <button class="tab tab-active" data-tab="dashboard" type="button" aria-current="page">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+    <span>Home</span>
+  </button>
+  <button class="tab" data-tab="log" type="button">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+    <span>Log</span>
+  </button>
+  <button class="tab" data-tab="swims" type="button">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+    <span>Swims</span>
+  </button>
+  <button class="tab" data-tab="plan" type="button">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 11h16"/></svg>
+    <span>Plan</span>
+  </button>
+  <button class="tab" data-tab="insights" type="button">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V10M10 19V4M16 19v-9M22 19H2"/></svg>
+    <span>Insights</span>
+  </button>
+</nav>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
