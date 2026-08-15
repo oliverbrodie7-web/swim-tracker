@@ -243,16 +243,14 @@ input:focus, textarea:focus {
 }
 
 .quick-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
   margin: -6px 0 16px;
 }
 .quick-btn {
-  flex: 1;
-  min-width: 56px;
-  padding: 9px 4px;
-  font-size: 0.9rem;
+  padding: 12px 2px;
+  font-size: 0.88rem;
   font-weight: 600;
   border: 1.5px solid var(--hairline);
   border-radius: 10px;
@@ -260,6 +258,20 @@ input:focus, textarea:focus {
   color: var(--ink);
 }
 .quick-btn:active { background: var(--sand); }
+.quick-btn.selected {
+  background: var(--terracotta);
+  border-color: var(--terracotta);
+  color: var(--paper);
+}
+
+/* Quick log on the dashboard */
+.quick-date { margin: -2px 0 12px; }
+#quickLogCard .quick-row { margin: 0 0 14px; }
+.save-btn:disabled {
+  background: var(--sand);
+  color: var(--ink-soft);
+  cursor: default;
+}
 
 .pace-hint {
   display: block;

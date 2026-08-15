@@ -394,6 +394,7 @@ function renderDashboard(st) {
   document.getElementById("statLeft").textContent = fmtKm(Math.max(0, GOAL_METRES - st.total));
   document.getElementById("statLaps").textContent = Math.round(st.total / 25).toLocaleString("en-AU");
   document.getElementById("statSwims").textContent = swims.length;
+  document.getElementById("quickDate").textContent = fmtDateFull(st.today);
 
   renderLane(st);
 
@@ -1149,6 +1150,88 @@ function handleSubmit(e) {
   switchTab("dashboard");
 }
 
+/* ---------- Quick log on the dashboard ----------
+   Most swims are a round distance on the day they happen, so the
+   dashboard can save one in two taps. The full form is still there
+   for a time, an effort score or notes. */
+
+let quickMetres = null;
+
+function updateQuickSaveBtn() {
+  const btn = document.getElementById("quickSaveBtn");
+  if (quickMetres) {
+    btn.disabled = false;
+    btn.textContent = "Save " + fmtMetres(quickMetres) + " m";
+  } else {
+    btn.disabled = true;
+    btn.textContent = "Pick a distance";
+  }
+}
+
+function resetQuickLog() {
+  quickMetres = null;
+  document.querySelectorAll("#quickMetresRow .quick-btn").forEach(function (b) {
+    b.classList.remove("selected");
+    b.setAttribute("aria-pressed", "false");
+  });
+  updateQuickSaveBtn();
+}
+
+function wireQuickLog() {
+  document.getElementById("quickMetresRow").addEventListener("click", function (e) {
+    const btn = e.target.closest(".quick-btn");
+    if (!btn) return;
+    const val = Number(btn.dataset.qm);
+    quickMetres = quickMetres === val ? null : val;
+    document.querySelectorAll("#quickMetresRow .quick-btn").forEach(function (b) {
+      const on = Number(b.dataset.qm) === quickMetres;
+      b.classList.toggle("selected", on);
+      b.setAttribute("aria-pressed", String(on));
+    });
+    updateQuickSaveBtn();
+  });
+
+  document.getElementById("quickSaveBtn").addEventListener("click", function () {
+    if (!quickMetres) return;
+    const saved = quickMetres;
+    enqueue({
+      type: "insert",
+      row: {
+        id: crypto.randomUUID(),
+        swim_date: todayStr(),
+        metres: saved,
+        unbroken_metres: null,
+        time_seconds: null,
+        rpe: null,
+        warm_up: null,
+        notes: null,
+        created_at: new Date().toISOString()
+      }
+    });
+    showToast(fmtMetres(saved) + " m saved for today", true);
+    resetQuickLog();
+    const btn = document.getElementById("quickSaveBtn");
+    btn.classList.add("saved-flash");
+    btn.textContent = "Saved";
+    btn.disabled = true;
+    setTimeout(function () {
+      btn.classList.remove("saved-flash");
+      updateQuickSaveBtn();
+    }, 1600);
+  });
+
+  document.getElementById("quickDetailBtn").addEventListener("click", function () {
+    const carried = quickMetres;
+    resetForm();
+    if (carried) {
+      document.getElementById("fMetres").value = carried;
+      updatePaceHint();
+    }
+    resetQuickLog();
+    switchTab("log");
+  });
+}
+
 /* ---------- Toast ---------- */
 
 let toastTimer = null;
@@ -1235,6 +1318,7 @@ function boot() {
   buildRpeChips();
   document.getElementById("fDate").value = todayStr();
   wireEvents();
+  wireQuickLog();
   updateSyncStatus();
   renderAll();
   refreshFromServer(false);

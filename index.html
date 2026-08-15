@@ -49,6 +49,19 @@
       <p class="eyebrow">This week</p>
       <p class="muted">Loading</p>
     </div>
+    <div class="card" id="quickLogCard">
+      <p class="eyebrow">Log today's swim</p>
+      <p class="muted quick-date" id="quickDate">Today</p>
+      <div class="quick-row" id="quickMetresRow" role="group" aria-label="Distance swum today">
+        <button type="button" class="quick-btn" data-qm="1000" aria-pressed="false">1000</button>
+        <button type="button" class="quick-btn" data-qm="1500" aria-pressed="false">1500</button>
+        <button type="button" class="quick-btn" data-qm="2000" aria-pressed="false">2000</button>
+        <button type="button" class="quick-btn" data-qm="2500" aria-pressed="false">2500</button>
+        <button type="button" class="quick-btn" data-qm="3000" aria-pressed="false">3000</button>
+      </div>
+      <button type="button" class="save-btn" id="quickSaveBtn" disabled>Pick a distance</button>
+      <button type="button" class="ghost-btn" id="quickDetailBtn">Add time, effort and notes</button>
+    </div>
   </section>
 
   <!-- Log -->
