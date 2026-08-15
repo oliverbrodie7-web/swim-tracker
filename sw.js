@@ -1,5 +1,5 @@
 /* Service worker for Swim. Bump CACHE_VERSION on every deploy. */
-const CACHE_VERSION = "swim-v5";
+const CACHE_VERSION = "swim-v6";
 const SHELL = [
   "./",
   "./index.html",
@@ -12,12 +12,21 @@ const SHELL = [
   "https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"
 ];
 
+/* Always go past the browser's own HTTP cache. GitHub Pages serves these
+   files with a ten minute freshness window, so an ordinary fetch can hand
+   back a stale copy and a deploy then sits invisible on the phone. */
+function freshFetch(url) {
+  return fetch(url, { cache: "reload", credentials: "same-origin" });
+}
+
 self.addEventListener("install", function (event) {
   event.waitUntil(
     caches.open(CACHE_VERSION).then(function (cache) {
       return Promise.all(
         SHELL.map(function (url) {
-          return cache.add(url).catch(function () {});
+          return freshFetch(url).then(function (res) {
+            if (res && (res.ok || res.type === "opaque")) return cache.put(url, res);
+          }).catch(function () {});
         })
       );
     }).then(function () { return self.skipWaiting(); })
@@ -50,7 +59,7 @@ self.addEventListener("fetch", function (event) {
     url.pathname.endsWith("/sw.js") || url.pathname.endsWith("/styles.css");
   if (isNav || isFresh) {
     event.respondWith(
-      fetch(req).then(function (res) {
+      freshFetch(req.url).then(function (res) {
         const copy = res.clone();
         caches.open(CACHE_VERSION).then(function (cache) { cache.put(req, copy); });
         return res;
