@@ -962,21 +962,37 @@ function renderAll() {
 
 /* ---------- Tabs ---------- */
 
-function switchTab(name) {
+let activeTab = "dashboard";
+
+/* Only the active screen is displayed. The inline display is set here in
+   JavaScript rather than left to the stylesheet, because a stylesheet can
+   be overridden by another rule and is cached harder than this file. */
+function applyActiveTab() {
   document.querySelectorAll(".view").forEach(function (v) {
-    v.hidden = v.dataset.view !== name;
+    const active = v.dataset.view === activeTab;
+    v.hidden = !active;
+    v.style.display = active ? "grid" : "none";
+    v.setAttribute("aria-hidden", active ? "false" : "true");
   });
   document.querySelectorAll(".tab").forEach(function (t) {
-    const active = t.dataset.tab === name;
+    const active = t.dataset.tab === activeTab;
     t.classList.toggle("tab-active", active);
     if (active) t.setAttribute("aria-current", "page");
     else t.removeAttribute("aria-current");
   });
+}
+
+function switchTab(name) {
+  activeTab = name;
+  applyActiveTab();
   if (name === "analytics" && chartsDirty) {
     renderAnalytics(computeStats());
     chartsDirty = false;
   }
+  /* Start each screen at its own heading */
   window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
 }
 
 /* ---------- Form ---------- */
@@ -1215,6 +1231,7 @@ function wireEvents() {
 
 function boot() {
   loadCache();
+  applyActiveTab();
   buildRpeChips();
   document.getElementById("fDate").value = todayStr();
   wireEvents();

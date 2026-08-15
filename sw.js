@@ -1,5 +1,5 @@
 /* Service worker for Swim. Bump CACHE_VERSION on every deploy. */
-const CACHE_VERSION = "swim-v3";
+const CACHE_VERSION = "swim-v4";
 const SHELL = [
   "./",
   "./index.html",
@@ -46,7 +46,8 @@ self.addEventListener("fetch", function (event) {
 
   /* Network first for the shell entry points so updates appear */
   const isNav = req.mode === "navigate";
-  const isFresh = url.pathname.endsWith("/index.html") || url.pathname.endsWith("/app.js") || url.pathname.endsWith("/sw.js");
+  const isFresh = url.pathname.endsWith("/index.html") || url.pathname.endsWith("/app.js") ||
+    url.pathname.endsWith("/sw.js") || url.pathname.endsWith("/styles.css");
   if (isNav || isFresh) {
     event.respondWith(
       fetch(req).then(function (res) {
