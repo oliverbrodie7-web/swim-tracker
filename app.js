@@ -570,7 +570,7 @@ function renderPlan(st) {
   }).join("");
 }
 
-/* ---------- Rendering: insights ---------- */
+/* ---------- Rendering: analytics ---------- */
 
 const CHART_FONT = "Figtree, sans-serif";
 
@@ -586,9 +586,12 @@ function killChart(id) {
   if (chartObjs[id]) { chartObjs[id].destroy(); delete chartObjs[id]; }
 }
 
-function renderInsights(st) {
+function renderAnalytics(st) {
+  renderUnbrokenHero();
+  renderPersonalBests();
+  renderPaceCaption();
+  renderConsistency(st);
   renderProjection(st);
-  renderPersonalBest();
   renderRecords(st);
 
   if (!chartDefaults()) {
@@ -672,7 +675,7 @@ function renderInsights(st) {
     }
   });
 
-  /* Unbroken trend */
+  /* Unbroken progression, the hero chart. Stepped so each new level reads as a jump. */
   const unb = asc.filter(function (s) { return s.unbroken_metres; });
   killChart("chartUnbroken");
   chartObjs.chartUnbroken = new Chart(document.getElementById("chartUnbroken"), {
@@ -680,11 +683,12 @@ function renderInsights(st) {
     data: {
       labels: unb.map(function (s) { return s.swim_date; }),
       datasets: [{
-        label: "Longest unbroken m",
+        label: "Unbroken metres",
         data: unb.map(function (s) { return s.unbroken_metres; }),
-        borderColor: "#6F8F5E",
-        backgroundColor: "rgba(111,143,94,0.15)",
-        fill: true, tension: 0.25, pointRadius: 3, borderWidth: 2
+        borderColor: "#C2693F",
+        backgroundColor: "rgba(194,105,63,0.16)",
+        fill: true, stepped: true, pointRadius: 2.5,
+        pointBackgroundColor: "#C2693F", borderWidth: 2.5
       }]
     },
     options: {
@@ -693,7 +697,10 @@ function renderInsights(st) {
         x: { ticks: { maxTicksLimit: 6, callback: axisDateTick } },
         y: { beginAtZero: true, title: { display: true, text: "metres" } }
       },
-      plugins: { legend: { display: false } }
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function (c) { return fmtMetres(c.parsed.y) + " m unbroken"; } } }
+      }
     }
   });
 
@@ -773,26 +780,136 @@ function renderProjection(st) {
   card.innerHTML = html;
 }
 
-/* Fastest swim of exactly 2000 m that has a recorded time.
-   Anything not exactly 2000 m, or with no time, is ignored. */
-function renderPersonalBest() {
-  const card = document.getElementById("pbCard");
-  const title = '<h2 class="card-title">2 km personal best</h2>';
+/* Fastest swim at exactly this distance that has a recorded time.
+   Anything of a different distance, or with no time, is ignored. */
+function bestForDistance(dist) {
   let best = null;
   swims.forEach(function (s) {
-    if (Number(s.metres) !== 2000) return;
+    if (Number(s.metres) !== dist) return;
     if (s.time_seconds == null || Number(s.time_seconds) <= 0) return;
     if (!best || Number(s.time_seconds) < Number(best.time_seconds)) best = s;
   });
+  return best;
+}
+
+function renderPersonalBests() {
+  const grid = document.getElementById("pbGrid");
+  const dists = [[1000, "1 km"], [2000, "2 km"], [3000, "3 km"]];
+  grid.innerHTML = dists.map(function (d) {
+    const best = bestForDistance(d[0]);
+    if (!best) {
+      return '<div class="pb-card">' +
+        '<p class="pb-dist">' + d[1] + "</p>" +
+        '<p class="pb-time pb-time-empty">Not set yet</p>' +
+        '<p class="pb-sub">Your next record to claim</p></div>';
+    }
+    const pace = (Number(best.time_seconds) / d[0]) * 100;
+    return '<div class="pb-card">' +
+      '<p class="pb-dist">' + d[1] + "</p>" +
+      '<p class="pb-time">' + fmtDuration(Number(best.time_seconds)) + "</p>" +
+      '<p class="pb-sub">Set on ' + fmtDateFull(best.swim_date) + "</p>" +
+      '<p class="pb-sub">' + fmtPace(pace) + " per 100 m</p></div>";
+  }).join("");
+}
+
+function renderUnbrokenHero() {
+  let best = null;
+  swims.forEach(function (s) {
+    if (!s.unbroken_metres) return;
+    if (!best || Number(s.unbroken_metres) > Number(best.unbroken_metres)) best = s;
+  });
+  const big = document.getElementById("unbrokenBig");
+  const when = document.getElementById("unbrokenWhen");
   if (!best) {
-    card.innerHTML = title + '<p class="muted">No 2 km swim with a recorded time yet.</p>';
+    big.textContent = "0";
+    when.textContent = "No unbroken distance recorded yet";
     return;
   }
-  const pace = (Number(best.time_seconds) / 2000) * 100;
+  big.textContent = fmtMetres(Number(best.unbroken_metres));
+  when.textContent = "Set on " + fmtDateFull(best.swim_date);
+}
+
+function renderPaceCaption() {
+  const el = document.getElementById("paceCaption");
+  const timed = swims.filter(function (s) { return paceFor(s); })
+    .sort(function (a, b) { return a.swim_date < b.swim_date ? -1 : 1; });
+  if (timed.length < 2) {
+    el.textContent = timed.length === 1
+      ? "One timed swim so far, at " + fmtPace(paceFor(timed[0])) + " per 100 m."
+      : "";
+    return;
+  }
+  const first = timed[0], last = timed[timed.length - 1];
+  const pf = paceFor(first), pl = paceFor(last);
+  const gap = Math.abs(Math.round(pf) - Math.round(pl));
+  let change;
+  if (gap === 0) change = "exactly the same pace";
+  else change = fmtPace(gap) + (pl < pf ? " faster" : " slower");
+  el.textContent =
+    "First timed swim on " + fmtDateFull(first.swim_date) + " was " + fmtPace(pf) +
+    " per 100 m. Most recent on " + fmtDateFull(last.swim_date) + " was " + fmtPace(pl) +
+    " per 100 m, which is " + change + ".";
+}
+
+function renderConsistency(st) {
+  const card = document.getElementById("consistencyCard");
+  const title = '<h2 class="card-title">Consistency</h2>';
+  if (swims.length === 0) {
+    card.innerHTML = title + '<p class="muted">No swims yet.</p>';
+    return;
+  }
+
+  /* Days since the last swim */
+  let lastDate = null;
+  swims.forEach(function (s) {
+    if (!lastDate || s.swim_date > lastDate) lastDate = s.swim_date;
+  });
+  const daysSince = daysBetween(lastDate, st.today);
+
+  /* Swims inside the current week, which ends on the Sunday */
+  const weekEnd = sundayFor(st.today);
+  const weekStart = addDays(weekEnd, -6);
+  let thisWeek = 0;
+  swims.forEach(function (s) {
+    if (s.swim_date >= weekStart && s.swim_date <= weekEnd) thisWeek++;
+  });
+
+  /* Average swims per week across the eight week blocks ending this week */
+  const start8 = addDays(weekEnd, -55);
+  let count8 = 0;
+  swims.forEach(function (s) {
+    if (s.swim_date >= start8 && s.swim_date <= weekEnd) count8++;
+  });
+  const avg8 = (count8 / 8).toFixed(1);
+
+  /* Longest run of consecutive plan weeks that met their target.
+     Reserve weeks with no target are skipped, and weeks still ahead of
+     us are ignored rather than counted as a miss. */
+  let streak = 0, run = 0;
+  st.weeks.forEach(function (w) {
+    if (w.target <= 0) return;
+    if (w.end > st.today && w.done < w.target) return;
+    if (w.done >= w.target) {
+      run++;
+      if (run > streak) streak = run;
+    } else {
+      run = 0;
+    }
+  });
+
+  const daysTxt = daysSince === 0 ? "Today" : (daysSince === 1 ? "1 day" : daysSince + " days");
+
+  function stat(val, label) {
+    return '<div class="stat"><span class="stat-num">' + val + '</span><span class="stat-label">' + label + "</span></div>";
+  }
+
   card.innerHTML = title +
-    '<p class="pb-time">' + fmtDuration(Number(best.time_seconds)) + "</p>" +
-    '<p class="pb-sub">Set on ' + fmtDateFull(best.swim_date) + "</p>" +
-    '<p class="pb-sub">' + fmtPace(pace) + " per 100 m</p>";
+    '<div class="consistency-grid">' +
+    stat(daysTxt, "since last swim") +
+    stat(thisWeek, thisWeek === 1 ? "swim this week" : "swims this week") +
+    stat(avg8, "average swims a week, last 8 weeks") +
+    stat(streak, streak === 1 ? "plan week hit in a row" : "plan weeks hit in a row") +
+    "</div>";
 }
 
 function renderRecords(st) {
@@ -801,10 +918,9 @@ function renderRecords(st) {
     card.innerHTML = '<h2 class="card-title">Records</h2><p class="muted">No swims yet.</p>';
     return;
   }
-  let longest = null, unbroken = null, fastest = null;
+  let longest = null, fastest = null;
   swims.forEach(function (s) {
     if (!longest || s.metres > longest.metres) longest = s;
-    if (s.unbroken_metres && (!unbroken || s.unbroken_metres > unbroken.unbroken_metres)) unbroken = s;
     const p = paceFor(s);
     if (p && (!fastest || p < paceFor(fastest))) fastest = s;
   });
@@ -826,7 +942,6 @@ function renderRecords(st) {
   card.innerHTML =
     '<h2 class="card-title">Records</h2><div class="records-grid">' +
     rec(fmtKm(longest.metres, 2) + " km", "Longest swim", longest.swim_date) +
-    (unbroken ? rec(fmtMetres(unbroken.unbroken_metres) + " m", "Longest unbroken", unbroken.swim_date) : rec("None yet", "Longest unbroken", null)) +
     (fastest ? rec(fmtPace(paceFor(fastest)) + " /100 m", "Fastest pace", fastest.swim_date) : rec("None yet", "Fastest pace", null)) +
     (bigWeek ? rec(fmtKm(weekTotals[bigWeek]) + " km", "Biggest week", bigWeek) : "") +
     "</div>";
@@ -839,8 +954,8 @@ function renderAll() {
   renderDashboard(st);
   renderSwimList();
   renderPlan(st);
-  if (!document.getElementById("view-insights").hidden) {
-    renderInsights(st);
+  if (!document.getElementById("view-analytics").hidden) {
+    renderAnalytics(st);
     chartsDirty = false;
   }
 }
@@ -857,8 +972,8 @@ function switchTab(name) {
     if (active) t.setAttribute("aria-current", "page");
     else t.removeAttribute("aria-current");
   });
-  if (name === "insights" && chartsDirty) {
-    renderInsights(computeStats());
+  if (name === "analytics" && chartsDirty) {
+    renderAnalytics(computeStats());
     chartsDirty = false;
   }
   window.scrollTo(0, 0);

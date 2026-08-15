@@ -115,8 +115,35 @@
     </div>
   </section>
 
-  <!-- Insights -->
-  <section id="view-insights" class="view" data-view="insights" hidden>
+  <!-- Analytics -->
+  <section id="view-analytics" class="view" data-view="analytics" hidden>
+
+    <div class="card unbroken-hero">
+      <p class="eyebrow">Longest unbroken swim</p>
+      <p class="hero-num"><span id="unbrokenBig">0</span><span class="hero-unit"> m</span></p>
+      <p class="pb-sub" id="unbrokenWhen">Loading</p>
+      <div class="chart-box chart-box-tall"><canvas id="chartUnbroken"></canvas></div>
+      <p class="chart-note chart-note-under">Every swim with an unbroken distance, in date order</p>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Personal bests</h2>
+      <p class="muted chart-note">Fastest time at each distance, lower is faster</p>
+      <div class="pb-grid" id="pbGrid"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Pace trend</h2>
+      <p class="muted chart-note">Average pace per 100 m for every timed swim, lower is faster</p>
+      <div class="chart-box"><canvas id="chartPace"></canvas></div>
+      <p class="pb-sub" id="paceCaption"></p>
+    </div>
+
+    <div class="card" id="consistencyCard">
+      <h2 class="card-title">Consistency</h2>
+      <p class="muted">Loading</p>
+    </div>
+
     <div class="card">
       <h2 class="card-title">Progress against plan</h2>
       <div class="chart-box"><canvas id="chartCumulative"></canvas></div>
@@ -126,21 +153,8 @@
       <p class="muted">Loading</p>
     </div>
     <div class="card">
-      <h2 class="card-title">Pace per 100 m</h2>
-      <p class="muted chart-note">Lower is faster</p>
-      <div class="chart-box"><canvas id="chartPace"></canvas></div>
-    </div>
-    <div class="card">
-      <h2 class="card-title">Longest unbroken swim</h2>
-      <div class="chart-box"><canvas id="chartUnbroken"></canvas></div>
-    </div>
-    <div class="card">
       <h2 class="card-title">Weekly volume, last 12 weeks</h2>
       <div class="chart-box"><canvas id="chartWeekly"></canvas></div>
-    </div>
-    <div class="card" id="pbCard">
-      <h2 class="card-title">2 km personal best</h2>
-      <p class="muted">Loading</p>
     </div>
     <div class="card" id="recordsCard">
       <h2 class="card-title">Records</h2>
@@ -167,9 +181,9 @@
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 11h16"/></svg>
     <span>Plan</span>
   </button>
-  <button class="tab" data-tab="insights" type="button">
+  <button class="tab" data-tab="analytics" type="button">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V10M10 19V4M16 19v-9M22 19H2"/></svg>
-    <span>Insights</span>
+    <span>Analytics</span>
   </button>
 </nav>
 
