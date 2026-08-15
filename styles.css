@@ -267,6 +267,8 @@ input:focus, textarea:focus {
   min-height: 1.2em;
 }
 
+.pace-hint.hint-error { color: var(--terracotta-deep); font-weight: 700; }
+
 .rpe-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .rpe-chip {
   width: 40px;
@@ -434,6 +436,16 @@ input:focus, textarea:focus {
 }
 .record-label { display: block; font-size: 0.78rem; color: var(--ink-soft); margin-top: 2px; }
 .record-date { display: block; font-size: 0.72rem; color: var(--ink-soft); }
+.pb-time {
+  font-family: var(--font-display);
+  font-size: 2.8rem;
+  font-weight: 700;
+  line-height: 1.05;
+  color: var(--terracotta);
+  margin-bottom: 8px;
+}
+.pb-sub { color: var(--ink-soft); font-size: 0.92rem; }
+
 .projection-big {
   font-family: var(--font-display);
   font-size: 1.6rem;

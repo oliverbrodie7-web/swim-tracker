@@ -1,5 +1,5 @@
 /* Service worker for Swim. Bump CACHE_VERSION on every deploy. */
-const CACHE_VERSION = "swim-v1";
+const CACHE_VERSION = "swim-v2";
 const SHELL = [
   "./",
   "./index.html",

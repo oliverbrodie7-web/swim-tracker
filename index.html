@@ -76,9 +76,9 @@
           <input type="number" id="fUnbroken" inputmode="numeric" min="25" max="30000" step="25" placeholder="800">
         </label>
         <label class="field">
-          <span class="field-label">Total time <em>optional, mm:ss or h:mm:ss</em></span>
-          <input type="text" id="fTime" inputmode="numeric" placeholder="45:00" pattern="^\d{1,2}(:\d{2}){1,2}$">
-          <span class="pace-hint" id="paceHint"></span>
+          <span class="field-label">Total time <em>optional, just type the digits</em></span>
+          <input type="text" id="fTime" inputmode="numeric" autocomplete="off" placeholder="4500 becomes 45:00">
+          <span class="pace-hint" id="paceHint" aria-live="polite"></span>
         </label>
         <div class="field">
           <span class="field-label">Effort, RPE 1 to 10 <em>optional</em></span>
@@ -137,6 +137,10 @@
     <div class="card">
       <h2 class="card-title">Weekly volume, last 12 weeks</h2>
       <div class="chart-box"><canvas id="chartWeekly"></canvas></div>
+    </div>
+    <div class="card" id="pbCard">
+      <h2 class="card-title">2 km personal best</h2>
+      <p class="muted">Loading</p>
     </div>
     <div class="card" id="recordsCard">
       <h2 class="card-title">Records</h2>

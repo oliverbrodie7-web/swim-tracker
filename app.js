@@ -99,6 +99,13 @@ function fmtDateLong(s) {
   return days[d.getDay()] + " " + fmtDateShort(s) + " " + d.getFullYear();
 }
 
+function fmtDateFull(s) {
+  const d = parseLocal(s);
+  const months = ["January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"];
+  return d.getDate() + " " + months[d.getMonth()] + " " + d.getFullYear();
+}
+
 /* ---------- Formatting ---------- */
 
 function fmtKm(m, dp) {
@@ -124,18 +131,46 @@ function fmtDuration(totalSec) {
   return m + ":" + pad2(s);
 }
 
+/* Time entry works on digits alone so the numeric keypad is enough.
+   Read right to left: last two digits are seconds, next two are minutes,
+   anything left over is hours. A typed colon is accepted and ignored. */
+
+function timeDigits(str) {
+  return String(str == null ? "" : str).replace(/\D/g, "").slice(0, 6);
+}
+
+function digitsToParts(digits) {
+  if (!digits) return null;
+  return {
+    s: parseInt(digits.slice(-2), 10),
+    m: digits.length > 2 ? parseInt(digits.slice(-4, -2), 10) : 0,
+    h: digits.length > 4 ? parseInt(digits.slice(0, -4), 10) : 0
+  };
+}
+
+function partsToSeconds(p) {
+  return p.h * 3600 + p.m * 60 + p.s;
+}
+
+/* Minutes and seconds each have to sit under 60 */
+function partsValid(p) {
+  return !!p && p.s <= 59 && p.m <= 59 && partsToSeconds(p) > 0;
+}
+
+/* Drop the leading zero on minutes when there is no hours part */
+function formatParts(p) {
+  if (!p) return "";
+  if (p.h > 0) return p.h + ":" + pad2(p.m) + ":" + pad2(p.s);
+  return p.m + ":" + pad2(p.s);
+}
+
+/* null for empty, NaN for an impossible time, otherwise seconds */
 function parseTimeInput(str) {
-  if (!str || !str.trim()) return null;
-  const parts = str.trim().split(":");
-  if (parts.length < 2 || parts.length > 3) return NaN;
-  if (parts.some(function (p) { return !/^\d+$/.test(p.trim()); })) return NaN;
-  const nums = parts.map(function (p) { return parseInt(p, 10); });
-  let sec;
-  if (nums.length === 2) sec = nums[0] * 60 + nums[1];
-  else sec = nums[0] * 3600 + nums[1] * 60 + nums[2];
-  if (nums.length >= 2 && nums[nums.length - 1] > 59) return NaN;
-  if (nums.length === 3 && nums[1] > 59) return NaN;
-  return sec > 0 ? sec : NaN;
+  const digits = timeDigits(str);
+  if (!digits) return null;
+  const p = digitsToParts(digits);
+  if (!partsValid(p)) return NaN;
+  return partsToSeconds(p);
 }
 
 /* ---------- Storage ---------- */
@@ -553,6 +588,7 @@ function killChart(id) {
 
 function renderInsights(st) {
   renderProjection(st);
+  renderPersonalBest();
   renderRecords(st);
 
   if (!chartDefaults()) {
@@ -737,6 +773,28 @@ function renderProjection(st) {
   card.innerHTML = html;
 }
 
+/* Fastest swim of exactly 2000 m that has a recorded time.
+   Anything not exactly 2000 m, or with no time, is ignored. */
+function renderPersonalBest() {
+  const card = document.getElementById("pbCard");
+  const title = '<h2 class="card-title">2 km personal best</h2>';
+  let best = null;
+  swims.forEach(function (s) {
+    if (Number(s.metres) !== 2000) return;
+    if (s.time_seconds == null || Number(s.time_seconds) <= 0) return;
+    if (!best || Number(s.time_seconds) < Number(best.time_seconds)) best = s;
+  });
+  if (!best) {
+    card.innerHTML = title + '<p class="muted">No 2 km swim with a recorded time yet.</p>';
+    return;
+  }
+  const pace = (Number(best.time_seconds) / 2000) * 100;
+  card.innerHTML = title +
+    '<p class="pb-time">' + fmtDuration(Number(best.time_seconds)) + "</p>" +
+    '<p class="pb-sub">Set on ' + fmtDateFull(best.swim_date) + "</p>" +
+    '<p class="pb-sub">' + fmtPace(pace) + " per 100 m</p>";
+}
+
 function renderRecords(st) {
   const card = document.getElementById("recordsCard");
   if (swims.length === 0) {
@@ -828,17 +886,38 @@ function buildRpeChips() {
   });
 }
 
+/* Rewrite the time field with its colons in place as the digits arrive */
+function reformatTimeField() {
+  const el = document.getElementById("fTime");
+  const digits = timeDigits(el.value);
+  const formatted = digits ? formatParts(digitsToParts(digits)) : "";
+  if (el.value !== formatted) el.value = formatted;
+  updatePaceHint();
+}
+
 function updatePaceHint() {
-  const metres = parseInt(document.getElementById("fMetres").value, 10);
-  const t = parseTimeInput(document.getElementById("fTime").value);
+  const el = document.getElementById("fTime");
   const hint = document.getElementById("paceHint");
-  if (metres > 0 && t && !isNaN(t)) {
-    hint.textContent = "Pace " + fmtPace((t / metres) * 100) + " per 100 m";
-  } else if (document.getElementById("fTime").value.trim() && isNaN(t)) {
-    hint.textContent = "Time should look like 45:00 or 1:05:30";
-  } else {
-    hint.textContent = "";
+  const metres = parseInt(document.getElementById("fMetres").value, 10);
+  const digits = timeDigits(el.value);
+
+  hint.classList.remove("hint-error");
+  el.removeAttribute("aria-invalid");
+
+  if (!digits) { hint.textContent = ""; return; }
+
+  const p = digitsToParts(digits);
+  if (p.s > 59 || p.m > 59) {
+    hint.textContent = p.s > 59 ? "Seconds cannot be more than 59" : "Minutes cannot be more than 59";
+    hint.classList.add("hint-error");
+    el.setAttribute("aria-invalid", "true");
+    return;
   }
+
+  const secs = partsToSeconds(p);
+  let msg = formatParts(p);
+  if (metres > 0 && secs > 0) msg += ", pace " + fmtPace((secs / metres) * 100) + " per 100 m";
+  hint.textContent = msg;
 }
 
 function resetForm() {
@@ -853,7 +932,10 @@ function resetForm() {
     c.classList.remove("selected");
     c.setAttribute("aria-pressed", "false");
   });
-  document.getElementById("paceHint").textContent = "";
+  const hint = document.getElementById("paceHint");
+  hint.textContent = "";
+  hint.classList.remove("hint-error");
+  document.getElementById("fTime").removeAttribute("aria-invalid");
 }
 
 function startEdit(id) {
@@ -875,7 +957,7 @@ function startEdit(id) {
   document.getElementById("logTitle").textContent = "Edit swim";
   document.getElementById("saveBtn").textContent = "Update swim";
   document.getElementById("cancelEditBtn").hidden = false;
-  updatePaceHint();
+  reformatTimeField();
   switchTab("log");
 }
 
@@ -889,9 +971,17 @@ function handleSubmit(e) {
   }
   const unbrokenRaw = document.getElementById("fUnbroken").value;
   const unbroken = unbrokenRaw ? parseInt(unbrokenRaw, 10) : null;
-  const t = parseTimeInput(document.getElementById("fTime").value);
-  if (document.getElementById("fTime").value.trim() && (t === null || isNaN(t))) {
-    showToast("Time should look like 45:00 or 1:05:30");
+  const timeEl = document.getElementById("fTime");
+  const t = parseTimeInput(timeEl.value);
+  if (timeEl.value.trim() && (t === null || isNaN(t))) {
+    updatePaceHint();
+    const hint = document.getElementById("paceHint");
+    if (!hint.classList.contains("hint-error")) {
+      hint.textContent = "That time does not look right";
+      hint.classList.add("hint-error");
+      timeEl.setAttribute("aria-invalid", "true");
+    }
+    timeEl.focus();
     return;
   }
   const warm = document.getElementById("fWarmup").value.trim() || null;
@@ -959,7 +1049,8 @@ function wireEvents() {
   });
 
   document.getElementById("fMetres").addEventListener("input", updatePaceHint);
-  document.getElementById("fTime").addEventListener("input", updatePaceHint);
+  document.getElementById("fTime").addEventListener("input", reformatTimeField);
+  document.getElementById("fTime").addEventListener("blur", reformatTimeField);
 
   document.querySelector(".quick-row").addEventListener("click", function (e) {
     const btn = e.target.closest(".quick-btn");
